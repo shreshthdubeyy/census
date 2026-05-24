@@ -11,134 +11,178 @@
 <body>
 
   <!-- ==========================================================================
-       HEADER & NAVIGATION
+       LOGIN LOCK SCREEN (Visible by default until authenticated)
        ========================================================================== -->
-  <header class="main-header">
-    <div class="header-container">
-      <div class="logo-block">
-        <img src="Logo.png" alt="Census Logo" class="logo-img">
-        <span class="app-title">CensusConnect</span>
+  <div id="login-screen" class="login-overlay">
+    <div class="login-card">
+      <div class="login-logo-block">
+        <img src="Logo.png" alt="Census Logo" class="login-logo-img">
+        <h2 class="login-app-title">CensusConnect</h2>
       </div>
+      <p class="login-subtitle">Official Socio-Economic Census Registry. Please authenticate with your Surveyor SE ID to access data entry logs.</p>
       
-      <nav class="nav-tabs">
-        <button class="tab-btn active" id="tab-new-entry" onclick="switchView('new-entry')">
-          <i data-lucide="clipboard-signature"></i> New Entry
+      <form id="login-form" onsubmit="handleLoginSubmit(event)">
+        <!-- Surveyor SE ID -->
+        <div class="input-container" style="margin-bottom: 16px;">
+          <label for="login-se-id" class="input-label">Surveyor SE ID <span>*</span></label>
+          <input type="text" id="login-se-id" class="form-input" placeholder="e.g. SE-12345" required autocapitalize="characters" autocomplete="username">
+        </div>
+        
+        <!-- Access Password -->
+        <div class="input-container" style="margin-bottom: 24px;">
+          <label for="login-password" class="input-label">Access Password <span>*</span></label>
+          <input type="password" id="login-password" class="form-input" placeholder="Enter access password" required autocomplete="current-password">
+        </div>
+        
+        <button type="submit" class="btn btn-primary" style="width: 100%;">
+          <i data-lucide="log-in"></i> Authenticate Operator
         </button>
-        <button class="tab-btn" id="tab-search-edit" onclick="switchView('search-edit')">
-          <i data-lucide="search-code"></i> Search & Edit
-        </button>
-      </nav>
+      </form>
     </div>
-  </header>
+  </div>
 
   <!-- ==========================================================================
-       MAIN APP WORKSPACE
+       MAIN APP LAYOUT (Hidden by default until logged in)
        ========================================================================== -->
-  <main class="app-container">
-
-    <!-- VIEW 1: NEW ENTRY VIEW -->
-    <section id="view-new-entry" class="view-panel active">
-      <div class="card">
-        <div class="card-title-bar">
-          <h2 class="card-title"><i data-lucide="plus-circle" style="color: var(--color-primary)"></i> Add New Bhavan</h2>
+  <div id="main-app-layout" style="display: none;">
+    
+    <!-- HEADER & NAVIGATION -->
+    <header class="main-header">
+      <div class="header-container">
+        <div class="logo-block">
+          <img src="Logo.png" alt="Census Logo" class="logo-img">
+          <span class="app-title">CensusConnect</span>
         </div>
+        
+        <nav class="nav-tabs">
+          <button class="tab-btn active" id="tab-new-entry" onclick="switchView('new-entry')">
+            <i data-lucide="clipboard-signature"></i> New Entry
+          </button>
+          <button class="tab-btn" id="tab-search-edit" onclick="switchView('search-edit')">
+            <i data-lucide="search-code"></i> Search & Edit
+          </button>
+        </nav>
 
-        <form id="new-bhavan-form" onsubmit="handleNewSubmit(event)">
-          <!-- Bhavan & Current Makaan Summary Block -->
-          <div class="form-header-summary">
-            <div class="bhavan-display">
-              <span class="bhavan-label">Bhavan Sankhya (Auto-Generated)</span>
-              <span class="bhavan-value" id="new-bhavan-id">CN-XXXX</span>
-            </div>
-            <div style="text-align: right;">
-              <span class="bhavan-label" style="display: block;">Estimated Next Makaan</span>
-              <span class="bhavan-value" id="next-makaan-estimate" style="font-size: 1.2rem; opacity: 0.9;">XXXX</span>
-            </div>
+        <!-- Surveyor Session Info & Logout -->
+        <div class="header-user-badge">
+          <div class="user-info">
+            <span class="user-label">Surveyor ID</span>
+            <span class="user-id" id="header-user-id">SE-XXXX</span>
           </div>
-
-          <!-- Makaan Blocks Container -->
-          <div id="makaan-blocks-container" class="form-group-list">
-            <!-- Dynamic Makaan blocks will be inserted here by JavaScript -->
-          </div>
-
-          <!-- Action Buttons -->
-          <div class="btn-group">
-            <button type="button" class="btn btn-outline" onclick="addMakaanBlock()">
-              <i data-lucide="plus"></i> Add Makaan / Family
-            </button>
-            <button type="submit" class="btn btn-primary" id="submit-new-btn">
-              <i data-lucide="save"></i> Submit Bhavan details
-            </button>
-          </div>
-        </form>
-      </div>
-    </section>
-
-    <!-- VIEW 2: SEARCH & EDIT VIEW -->
-    <section id="view-search-edit" class="view-panel">
-      <div class="card">
-        <div class="card-title-bar">
-          <h2 class="card-title"><i data-lucide="file-edit" style="color: var(--color-secondary)"></i> Search & Edit Records</h2>
-        </div>
-
-        <!-- Search Bar -->
-        <div class="search-bar-container">
-          <div class="search-input-wrapper">
-            <i data-lucide="search" class="search-icon-inside"></i>
-            <input type="text" id="search-bhavan-query" class="form-input search-input" placeholder="Enter Bhavan Sankhya (e.g. CN-0001)" onkeypress="handleSearchKeyPress(event)">
-          </div>
-          <button type="button" class="btn btn-primary search-btn" onclick="performBhavanSearch()" id="search-btn">
-            <i data-lucide="search"></i> Search
+          <button class="logout-btn" onclick="handleLogout()" title="Logout Session">
+            <i data-lucide="log-out"></i>
           </button>
         </div>
-
-        <!-- Skeleton Loading State -->
-        <div class="skeleton-loader" id="search-skeleton">
-          <div class="skeleton-row" style="width: 40%; margin-bottom: 20px;"></div>
-          <div class="skeleton-card"></div>
-        </div>
-
-        <!-- Edit Form Area (Hidden until data is loaded) -->
-        <form id="edit-bhavan-form" style="display: none;" onsubmit="handleEditSubmit(event)">
-          <div class="form-header-summary" style="background-color: hsl(195, 80%, 95%); border-left-color: var(--color-secondary);">
-            <div class="bhavan-display">
-              <span class="bhavan-label">Editing Bhavan Sankhya</span>
-              <span class="bhavan-value" id="edit-bhavan-id" style="color: var(--color-secondary);">CN-XXXX</span>
-            </div>
-            <div style="text-align: right;">
-              <span class="bhavan-label" style="display: block;">Families in Bhavan</span>
-              <span class="bhavan-value" id="edit-families-count" style="font-size: 1.2rem; opacity: 0.9; color: var(--color-secondary);">0</span>
-            </div>
-          </div>
-
-          <!-- Makaans list in edit mode -->
-          <div id="edit-makaan-blocks-container" class="form-group-list">
-            <!-- Dynamic editable Makaan cards will be inserted here -->
-          </div>
-
-          <!-- Edit Actions -->
-          <div class="btn-group">
-            <button type="button" class="btn btn-outline" onclick="addMakaanToEdit()" style="border-color: var(--color-secondary); color: var(--color-secondary);">
-              <i data-lucide="plus"></i> Add Makaan under this Bhavan
-            </button>
-            <button type="submit" class="btn btn-primary" id="update-btn" style="background-color: var(--color-secondary); box-shadow: 0 4px 12px rgba(6, 182, 212, 0.25);">
-              <i data-lucide="check-circle"></i> Save Updates
-            </button>
-          </div>
-        </form>
-
-        <!-- No Results / Initial Search State -->
-        <div class="no-results" id="search-placeholder">
-          <i data-lucide="search" class="no-results-icon"></i>
-          <h3>Search a Bhavan ID to Begin</h3>
-          <p style="color: var(--text-light); max-width: 320px; margin: 8px auto 0 auto; font-size: 0.9rem;">
-            Enter the exact Bhavan ID (e.g. <strong>CN-0001</strong>) above to fetch, edit, or add family details.
-          </p>
-        </div>
       </div>
-    </section>
+    </header>
 
-  </main>
+    <!-- MAIN APP WORKSPACE -->
+    <main class="app-container">
+
+      <!-- VIEW 1: NEW ENTRY VIEW -->
+      <section id="view-new-entry" class="view-panel active">
+        <div class="card">
+          <div class="card-title-bar">
+            <h2 class="card-title"><i data-lucide="plus-circle" style="color: var(--color-primary)"></i> Add New Bhavan</h2>
+          </div>
+
+          <form id="new-bhavan-form" onsubmit="handleNewSubmit(event)">
+            <!-- Bhavan & Current Makaan Summary Block -->
+            <div class="form-header-summary">
+              <div class="bhavan-display">
+                <span class="bhavan-label">Bhavan Sankhya (Auto-Generated)</span>
+                <span class="bhavan-value" id="new-bhavan-id">CN-XXXX</span>
+              </div>
+              <div style="text-align: right;">
+                <span class="bhavan-label" style="display: block;">Estimated Next Makaan</span>
+                <span class="bhavan-value" id="next-makaan-estimate" style="font-size: 1.2rem; opacity: 0.9;">XXXX</span>
+              </div>
+            </div>
+
+            <!-- Makaan Blocks Container -->
+            <div id="makaan-blocks-container" class="form-group-list">
+              <!-- Dynamic Makaan blocks will be inserted here by JavaScript -->
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="btn-group">
+              <button type="button" class="btn btn-outline" onclick="addMakaanBlock()">
+                <i data-lucide="plus"></i> Add Makaan / Family
+              </button>
+              <button type="submit" class="btn btn-primary" id="submit-new-btn">
+                <i data-lucide="save"></i> Submit Bhavan details
+              </button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <!-- VIEW 2: SEARCH & EDIT VIEW -->
+      <section id="view-search-edit" class="view-panel">
+        <div class="card">
+          <div class="card-title-bar">
+            <h2 class="card-title"><i data-lucide="file-edit" style="color: var(--color-secondary)"></i> Search & Edit Records</h2>
+          </div>
+
+          <!-- Search Bar -->
+          <div class="search-bar-container">
+            <div class="search-input-wrapper">
+              <i data-lucide="search" class="search-icon-inside"></i>
+              <input type="text" id="search-bhavan-query" class="form-input search-input" placeholder="Enter Bhavan Sankhya (e.g. CN-0001)" onkeypress="handleSearchKeyPress(event)">
+            </div>
+            <button type="button" class="btn btn-primary search-btn" onclick="performBhavanSearch()" id="search-btn">
+              <i data-lucide="search"></i> Search
+            </button>
+          </div>
+
+          <!-- Skeleton Loading State -->
+          <div class="skeleton-loader" id="search-skeleton">
+            <div class="skeleton-row" style="width: 40%; margin-bottom: 20px;"></div>
+            <div class="skeleton-card"></div>
+          </div>
+
+          <!-- Edit Form Area (Hidden until data is loaded) -->
+          <form id="edit-bhavan-form" style="display: none;" onsubmit="handleEditSubmit(event)">
+            <div class="form-header-summary" style="background-color: hsl(195, 80%, 95%); border-left-color: var(--color-secondary);">
+              <div class="bhavan-display">
+                <span class="bhavan-label">Editing Bhavan Sankhya</span>
+                <span class="bhavan-value" id="edit-bhavan-id" style="color: var(--color-secondary);">CN-XXXX</span>
+              </div>
+              <div style="text-align: right;">
+                <span class="bhavan-label" style="display: block;">Families in Bhavan</span>
+                <span class="bhavan-value" id="edit-families-count" style="font-size: 1.2rem; opacity: 0.9; color: var(--color-secondary);">0</span>
+              </div>
+            </div>
+
+            <!-- Makaans list in edit mode -->
+            <div id="edit-makaan-blocks-container" class="form-group-list">
+              <!-- Dynamic editable Makaan cards will be inserted here -->
+            </div>
+
+            <!-- Edit Actions -->
+            <div class="btn-group">
+              <button type="button" class="btn btn-outline" onclick="addMakaanToEdit()" style="border-color: var(--color-secondary); color: var(--color-secondary);">
+                <i data-lucide="plus"></i> Add Makaan under this Bhavan
+              </button>
+              <button type="submit" class="btn btn-primary" id="update-btn" style="background-color: var(--color-secondary); box-shadow: 0 4px 12px rgba(6, 182, 212, 0.25);">
+                <i data-lucide="check-circle"></i> Save Updates
+              </button>
+            </div>
+          </form>
+
+          <!-- No Results / Initial Search State -->
+          <div class="no-results" id="search-placeholder">
+            <i data-lucide="search" class="no-results-icon"></i>
+            <h3>Search a Bhavan ID to Begin</h3>
+            <p style="color: var(--text-light); max-width: 320px; margin: 8px auto 0 auto; font-size: 0.9rem;">
+              Enter the exact Bhavan ID (e.g. <strong>CN-0001</strong>) above to fetch, edit, or add family details.
+            </p>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
 
   <!-- ==========================================================================
        TOAST NOTIFICATION SYSTEM CONTAINER

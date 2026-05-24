@@ -5,9 +5,15 @@
 // Secured direct Google Apps Script Web App Endpoint URL
 const API_URL = "https://script.google.com/macros/s/AKfycbyf2VOpYhOvVaMeUSI405NbxIMNsT3dwJVGlEXZjoaa0fE895DupTyWsk86cVSSfhrc/exec";
 
+// Master access password for field workers
+const ACCESS_PASSWORD = "Yud@8299877790";
+
 // Global App State
 const state = {
   currentView: 'new-entry',
+  
+  // Authenticated surveyor details
+  surveyorId: '',
   
   // Next IDs fetched directly from Google Sheets
   nextBhavanId: 'CN-0001',
@@ -32,8 +38,85 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function initApp() {
-  // 1. Fetch Next ID Numbers directly from spreadsheet
+  // Check browser session cache for existing login
+  const savedSurveyorId = sessionStorage.getItem('census_surveyor_id');
+  if (savedSurveyorId) {
+    state.surveyorId = savedSurveyorId.toUpperCase();
+    showDashboard();
+  } else {
+    showLogin();
+  }
+}
+
+// Render Login Page Layout
+function showLogin() {
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('main-app-layout').style.display = 'none';
+  
+  const seIdInput = document.getElementById('login-se-id');
+  seIdInput.value = "";
+  document.getElementById('login-password').value = "";
+  
+  setTimeout(() => seIdInput.focus(), 150);
+}
+
+// Render Authenticated Dashboard
+function showDashboard() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('main-app-layout').style.display = 'block';
+  
+  // Display active Operator SE ID in header user badge
+  document.getElementById('header-user-id').textContent = state.surveyorId;
+  
+  // Trigger progressive database ID sync
   fetchNextIdState();
+  
+  // Reload icons inside dashboard header/tabs
+  lucide.createIcons({
+    nodeList: document.querySelectorAll('#main-app-layout [data-lucide]')
+  });
+}
+
+// Handle Authentication Submit
+function handleLoginSubmit(event) {
+  event.preventDefault();
+  
+  const seIdInput = document.getElementById('login-se-id');
+  const passwordInput = document.getElementById('login-password');
+  
+  const seId = seIdInput.value.trim().toUpperCase();
+  const password = passwordInput.value;
+  
+  if (seId === "") {
+    showToast("Authentication Error", "Please enter a valid Surveyor SE ID.", "error");
+    return;
+  }
+  
+  if (password !== ACCESS_PASSWORD) {
+    showToast("Access Denied", "Incorrect password. Please try again.", "error");
+    passwordInput.value = "";
+    passwordInput.focus();
+    return;
+  }
+  
+  // Success
+  state.surveyorId = seId;
+  sessionStorage.setItem('census_surveyor_id', seId);
+  
+  showToast("Authenticated Successfully", `Welcome back, Operator ${seId}!`, "success");
+  showDashboard();
+  
+  // Wipe password input for memory safety
+  passwordInput.value = "";
+}
+
+// Handle Session Logout
+function handleLogout() {
+  sessionStorage.removeItem('census_surveyor_id');
+  state.surveyorId = '';
+  
+  showToast("Logged Out", "Session ended successfully.", "success");
+  showLogin();
 }
 
 // Switch between panels smoothly
@@ -131,10 +214,10 @@ function addMakaanBlock(initialData = null) {
           <input type="tel" name="mobileNo" class="form-input" placeholder="e.g. 9876543210" required maxlength="10" inputmode="numeric" pattern="[0-9]{10}" oninput="formatMobileNumber(this); validateField(this);">
         </div>
         
-        <!-- SE ID -->
+        <!-- Locked SE ID (Autofilled via Surveyor Login) -->
         <div class="input-container">
           <label class="input-label">SE ID (Socio-Economic ID)</label>
-          <input type="text" name="seId" class="form-input" placeholder="Enter Socio-Economic ID (Optional)" autocapitalize="characters" autocomplete="off" autocorrect="off">
+          <input type="text" name="seId" class="form-input" placeholder="Surveyor ID autofilled" value="${state.surveyorId}" readonly style="background-color: var(--border-light); font-weight: 700; color: var(--text-muted); cursor: not-allowed;">
         </div>
         
         <!-- Remarks -->
@@ -220,6 +303,7 @@ function formatMobileNumber(input) {
   input.value = cleanValue;
 }
 
+// Note: Removed validation for SE ID since it is locked to the surveyorId
 function validateField(input) {
   if (input.required && (!input.value || input.value.trim() === "")) {
     input.classList.add('invalid');
@@ -280,7 +364,7 @@ async function handleNewSubmit(event) {
     entries.push({
       mukhiyaNaam: block.querySelector('[name="mukhiyaNaam"]').value.trim(),
       mobileNo: block.querySelector('[name="mobileNo"]').value.trim(),
-      seId: block.querySelector('[name="seId"]').value.trim(),
+      seId: block.querySelector('[name="seId"]').value.trim(), // Stays locked to the active surveyor session
       remarks: block.querySelector('[name="remarks"]').value.trim()
     });
   });
@@ -423,11 +507,14 @@ function renderEditMakaanCard(makaan, index, container) {
   const blockIndex = makaan.makaanId;
   const isDeleted = state.deletedMakaanIds.includes(blockIndex);
   
+  // Enforce NNNN formatting (4-digit padding) for visual output
+  const formattedMakaanId = pad(parseInt(makaan.makaanId, 10), 4);
+  
   const cardHTML = `
     <div class="makaan-block" id="edit-makaan-block-${blockIndex}" style="${isDeleted ? 'opacity: 0.5; border-color: var(--color-error);' : ''}">
       <div class="makaan-block-header">
         <span class="makaan-title" style="background-color: hsl(195, 80%, 94%); color: var(--color-secondary);">
-          <i data-lucide="home"></i> Makaan Sankhya: <strong>${makaan.makaanId}</strong>
+          <i data-lucide="home"></i> Makaan Sankhya: <strong>${formattedMakaanId}</strong>
         </span>
         
         ${isDeleted ? 
@@ -441,7 +528,7 @@ function renderEditMakaanCard(makaan, index, container) {
       </div>
       
       <div class="makaan-grid" style="${isDeleted ? 'pointer-events: none;' : ''}">
-        <input type="hidden" name="makaanId" value="${makaan.makaanId}">
+        <input type="hidden" name="makaanId" value="${formattedMakaanId}">
         
         <!-- Mukhiya Naam -->
         <div class="input-container">
@@ -455,10 +542,10 @@ function renderEditMakaanCard(makaan, index, container) {
           <input type="tel" name="mobileNo" class="form-input" placeholder="10-digit number" required value="${makaan.mobileNo || ''}" maxlength="10" inputmode="numeric" pattern="[0-9]{10}" oninput="formatMobileNumber(this); validateField(this);">
         </div>
         
-        <!-- SE ID -->
+        <!-- Locked SE ID (Defaults to original value or active Surveyor ID if newly added) -->
         <div class="input-container">
           <label class="input-label">SE ID (Socio-Economic ID)</label>
-          <input type="text" name="seId" class="form-input" placeholder="Social Economic ID (Optional)" value="${makaan.seId || ''}" autocapitalize="characters" autocomplete="off" autocorrect="off">
+          <input type="text" name="seId" class="form-input" placeholder="Socio-Economic ID" value="${makaan.seId || state.surveyorId}" readonly style="background-color: var(--border-light); font-weight: 700; color: var(--text-muted); cursor: not-allowed;">
         </div>
         
         <!-- Remarks -->
@@ -515,7 +602,7 @@ async function addMakaanToEdit() {
     makaanId: nextIdStr,
     mukhiyaNaam: "",
     mobileNo: "",
-    seId: "",
+    seId: state.surveyorId, // Automatically assign the logged-in surveyor ID
     remarks: "",
     isNew: true
   };
@@ -565,7 +652,7 @@ async function handleEditSubmit(event) {
       makaanId: makaanId,
       mukhiyaNaam: card.querySelector('[name="mukhiyaNaam"]').value.trim(),
       mobileNo: card.querySelector('[name="mobileNo"]').value.trim(),
-      seId: card.querySelector('[name="seId"]').value.trim(),
+      seId: card.querySelector('[name="seId"]').value.trim(), // Retains locked surveyor ID
       remarks: card.querySelector('[name="remarks"]').value.trim()
     });
   });
