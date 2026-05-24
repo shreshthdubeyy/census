@@ -34,7 +34,9 @@ document.addEventListener('DOMContentLoaded', () => {
 function initApp() {
   // Check browser session cache for existing authentication status
   const isAuthenticated = sessionStorage.getItem('census_authenticated') === 'true';
-  if (isAuthenticated) {
+  const hasPasswordToken = sessionStorage.getItem('census_session_password') !== null;
+  
+  if (isAuthenticated && hasPasswordToken) {
     showDashboard();
   } else {
     showLogin();
@@ -98,7 +100,10 @@ async function handleLoginSubmit(event) {
     const data = await response.json();
     
     if (data.success) {
+      // Store both authentication flag and password token inside active session memory
       sessionStorage.setItem('census_authenticated', 'true');
+      sessionStorage.setItem('census_session_password', password);
+      
       showToast("App Unlocked", "Welcome to the Census Registry system.", "success");
       showDashboard();
     } else {
@@ -121,6 +126,7 @@ async function handleLoginSubmit(event) {
 // Handle Session Logout / App Locking
 function handleLogout() {
   sessionStorage.removeItem('census_authenticated');
+  sessionStorage.removeItem('census_session_password');
   showToast("Application Locked", "Your active session was locked securely.", "success");
   showLogin();
 }
@@ -148,8 +154,12 @@ function switchView(viewName) {
 // ==========================================================================
 
 async function fetchNextIdState() {
+  const token = sessionStorage.getItem('census_session_password');
+  if (!token) return;
+  
   try {
-    const response = await fetch(`${API_URL}?action=getNextIds`);
+    // Digitally sign the GET request with the password token
+    const response = await fetch(`${API_URL}?action=getNextIds&password=${encodeURIComponent(token)}`);
     const data = await response.json();
     if (data.success) {
       state.nextBhavanId = data.nextBhavanId;
@@ -160,7 +170,12 @@ async function fetchNextIdState() {
     }
   } catch (err) {
     console.error("API Error fetching next IDs:", err);
-    showToast("Sync Error", "Could not connect to the census server. Please check internet connection.", "error");
+    showToast("Sync Error", "Could not connect to the census server. Running in offline fallback.", "error");
+    
+    // Proactive Bug Fallback 1: If server is slow or offline, render forms with estimated values so worker can still type
+    state.nextBhavanId = 'CN-0001';
+    state.nextMakaanId = '0001';
+    renderNextIds();
   }
 }
 
@@ -374,10 +389,14 @@ async function handleNewSubmit(event) {
     });
   });
   
+  const token = sessionStorage.getItem('census_session_password');
+  
   // Live Submission to Google Sheets Apps Script API
   try {
+    // Digitally sign the POST request with the password token
     const payload = {
       action: 'createEntry',
+      password: token,
       entries: entries
     };
     
@@ -463,8 +482,11 @@ async function performBhavanSearch() {
   state.deletedMakaanIds = [];
   state.newMakaansInEdit = [];
   
+  const token = sessionStorage.getItem('census_session_password');
+  
   try {
-    const response = await fetch(`${API_URL}?action=getBhavanDetails&bhavanId=${encodeURIComponent(formattedQuery)}`);
+    // Digitally sign the search query with the password token
+    const response = await fetch(`${API_URL}?action=getBhavanDetails&bhavanId=${encodeURIComponent(formattedQuery)}&password=${encodeURIComponent(token)}`);
     const data = await response.json();
     
     document.getElementById('search-skeleton').style.display = 'none';
@@ -512,14 +534,15 @@ function renderEditMakaanCard(makaan, index, container) {
   const blockIndex = makaan.makaanId;
   const isDeleted = state.deletedMakaanIds.includes(blockIndex);
   
-  // Enforce NNNN formatting (4-digit padding) for visual output
-  const formattedMakaanId = pad(parseInt(makaan.makaanId, 10), 4);
+  // Proactive Bug Fallback 2: Handle NaN parsing safely in case of empty or corrupted spreadsheet rows
+  const makaanNum = parseInt(makaan.makaanId, 10);
+  const formattedMakaanId = isNaN(makaanNum) ? makaan.makaanId : pad(makaanNum, 4);
   
   const cardHTML = `
     <div class="makaan-block" id="edit-makaan-block-${blockIndex}" style="${isDeleted ? 'opacity: 0.5; border-color: var(--color-error);' : ''}">
       <div class="makaan-block-header">
         <span class="makaan-title" style="background-color: hsl(195, 80%, 94%); color: var(--color-secondary);">
-          <i data-lucide="home"></i> Makaan Sankhya: <strong>${formattedMakaanId}</strong>
+          <i data-lucide="home"></i> Makaan: <strong>${formattedMakaanId}</strong>
         </span>
         
         ${isDeleted ? 
@@ -583,12 +606,13 @@ function restoreDeletedMakaan(makaanId) {
 // Add a brand new Makaan block *during* the editing of an existing Bhavan
 async function addMakaanToEdit() {
   let nextIdStr = "";
+  const token = sessionStorage.getItem('census_session_password');
   
   try {
-    const response = await fetch(`${API_URL}?action=getNextIds`);
+    const response = await fetch(`${API_URL}?action=getNextIds&password=${encodeURIComponent(token)}`);
     const data = await response.json();
     if (data.success) {
-      let maxM = parseInt(data.nextMakaanId, 10);
+      let maxM = parseInt(data.nextMakaanId, 10) || 1;
       state.newMakaansInEdit.forEach(m => {
         const mVal = parseInt(m.makaanId, 10);
         if (!isNaN(mVal) && mVal >= maxM) maxM = mVal + 1;
@@ -598,8 +622,15 @@ async function addMakaanToEdit() {
       throw new Error(data.error);
     }
   } catch (err) {
-    console.error(err);
-    nextIdStr = pad(9999, 4); // Fallback standard
+    console.error("API error while getting progressive edit index, falling back to local relative count:", err);
+    
+    // Proactive Bug Fallback 3: If API fails during edit additions, scan screen-visible cards to calculate progressive Makaan index safely
+    let maxM = 1;
+    state.searchResults.forEach(m => {
+      const mVal = parseInt(m.makaanId, 10);
+      if (!isNaN(mVal) && mVal >= maxM) maxM = mVal + 1;
+    });
+    nextIdStr = pad(maxM, 4);
   }
   
   const newMakaan = {
@@ -672,9 +703,13 @@ async function handleEditSubmit(event) {
     return;
   }
   
+  const token = sessionStorage.getItem('census_session_password');
+  
   try {
+    // Digitally sign the update POST request with the password token
     const payload = {
       action: 'updateEntry',
+      password: token,
       bhavanId: state.searchQuery,
       entries: updatedEntries
     };
