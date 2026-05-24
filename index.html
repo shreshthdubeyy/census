@@ -19,15 +19,9 @@
         <img src="Logo.png" alt="Census Logo" class="login-logo-img">
         <h2 class="login-app-title">CensusConnect</h2>
       </div>
-      <p class="login-subtitle">Official Socio-Economic Census Registry. Please authenticate with your Surveyor SE ID to access data entry logs.</p>
+      <p class="login-subtitle">Official Socio-Economic Census Registry. Please enter the access password to unlock the data collection panels.</p>
       
       <form id="login-form" onsubmit="handleLoginSubmit(event)">
-        <!-- Surveyor SE ID -->
-        <div class="input-container" style="margin-bottom: 16px;">
-          <label for="login-se-id" class="input-label">Surveyor SE ID <span>*</span></label>
-          <input type="text" id="login-se-id" class="form-input" placeholder="e.g. SE-12345" required autocapitalize="characters" autocomplete="username">
-        </div>
-        
         <!-- Access Password -->
         <div class="input-container" style="margin-bottom: 24px;">
           <label for="login-password" class="input-label">Access Password <span>*</span></label>
@@ -35,7 +29,7 @@
         </div>
         
         <button type="submit" class="btn btn-primary" style="width: 100%;">
-          <i data-lucide="log-in"></i> Authenticate Operator
+          <i data-lucide="unlock"></i> Unlock Application
         </button>
       </form>
     </div>
@@ -63,16 +57,11 @@
           </button>
         </nav>
 
-        <!-- Surveyor Session Info & Logout -->
-        <div class="header-user-badge">
-          <div class="user-info">
-            <span class="user-label">Surveyor ID</span>
-            <span class="user-id" id="header-user-id">SE-XXXX</span>
-          </div>
-          <button class="logout-btn" onclick="handleLogout()" title="Logout Session">
-            <i data-lucide="log-out"></i>
-          </button>
-        </div>
+        <!-- Lock App Session button -->
+        <button class="logout-btn" onclick="handleLogout()" title="Lock Application" style="background-color: var(--color-error-light); padding: 8px 14px; border-radius: 20px; display: flex; align-items: center; gap: 6px; border: none;">
+          <i data-lucide="lock" style="width: 16px; height: 16px;"></i> 
+          <span style="font-size: 0.85rem; font-weight: 700; color: var(--color-error);">Lock App</span>
+        </button>
       </div>
     </header>
 
