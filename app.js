@@ -91,6 +91,7 @@ async function handleLoginSubmit(event) {
     // Fetch secure comparison result from Google cloud server-side
     const response = await fetch(API_URL, {
       method: 'POST',
+      credentials: 'omit',
       headers: {
         'Content-Type': 'text/plain;charset=utf-8'
       },
@@ -159,7 +160,9 @@ async function fetchNextIdState() {
   
   try {
     // Digitally sign the GET request with the password token
-    const response = await fetch(`${API_URL}?action=getNextIds&password=${encodeURIComponent(token)}`);
+    const response = await fetch(`${API_URL}?action=getNextIds&password=${encodeURIComponent(token)}`, {
+      credentials: 'omit'
+    });
     const data = await response.json();
     if (data.success) {
       state.nextBhavanId = data.nextBhavanId;
@@ -402,6 +405,7 @@ async function handleNewSubmit(event) {
     
     const response = await fetch(API_URL, {
       method: 'POST',
+      credentials: 'omit',
       headers: {
         'Content-Type': 'text/plain;charset=utf-8' // Crucial to avoid CORS OPTIONS pre-flight checks
       },
@@ -452,30 +456,77 @@ function handleSearchKeyPress(event) {
   }
 }
 
+// Clear search results and reset view
+function clearSearchResults() {
+  document.getElementById('search-results-container').style.display = 'none';
+  document.getElementById('edit-bhavan-form').style.display = 'none';
+  document.getElementById('search-placeholder').style.display = 'block';
+  
+  const queryInput = document.getElementById('search-bhavan-query');
+  queryInput.value = '';
+  queryInput.focus();
+}
+
+// Load a specific Bhavan ID details directly into the edit panel
+async function loadBhavanForEditing(bhavanId) {
+  document.getElementById('search-results-container').style.display = 'none';
+  document.getElementById('edit-bhavan-form').style.display = 'none';
+  document.getElementById('search-skeleton').style.display = 'flex';
+  
+  state.searchQuery = bhavanId;
+  state.searchResults = [];
+  state.deletedMakaanIds = [];
+  state.newMakaansInEdit = [];
+  
+  const token = sessionStorage.getItem('census_session_password');
+  
+  try {
+    const response = await fetch(`${API_URL}?action=getBhavanDetails&bhavanId=${encodeURIComponent(bhavanId)}&password=${encodeURIComponent(token)}`, {
+      credentials: 'omit'
+    });
+    const data = await response.json();
+    
+    document.getElementById('search-skeleton').style.display = 'none';
+    
+    if (data.success && data.data.length > 0) {
+      state.searchResults = data.data;
+      renderEditForm();
+    } else {
+      showNoResultsForQuery(bhavanId);
+    }
+  } catch (err) {
+    console.error("API error while loading Bhavan:", err);
+    document.getElementById('search-skeleton').style.display = 'none';
+    showToast("Network Error", "Could not connect to the spreadsheet server.", "error");
+    showNoResultsForQuery(bhavanId);
+  }
+}
+
+// Perform high-fidelity universal search
 async function performBhavanSearch() {
   const queryInput = document.getElementById('search-bhavan-query');
   const rawQuery = queryInput.value.trim();
   
   if (!rawQuery) {
-    showToast("Search Error", "Please enter a valid Bhavan ID (e.g. CN-0001)", "warning");
+    showToast("Search Error", "Please enter a search query (Bhavan ID, name, or phone)", "warning");
     return;
   }
   
-  // Uniform formatting of search queries (e.g., CN-1 -> CN-0001)
-  let formattedQuery = rawQuery.toUpperCase();
+  // Format query strictly if it matches CN-NNNN format for direct lookup
+  let processedQuery = rawQuery;
   const digitMatch = rawQuery.match(/CN-(\d+)/i);
   if (digitMatch) {
-    formattedQuery = "CN-" + pad(parseInt(digitMatch[1], 10), 4);
-  } else if (!formattedQuery.startsWith("CN-") && !isNaN(parseInt(formattedQuery, 10))) {
-    formattedQuery = "CN-" + pad(parseInt(formattedQuery, 10), 4);
+    processedQuery = "CN-" + pad(parseInt(digitMatch[1], 10), 4);
+    queryInput.value = processedQuery;
+  } else if (!isNaN(parseInt(rawQuery, 10)) && rawQuery.length <= 4) {
+    processedQuery = "CN-" + pad(parseInt(rawQuery, 10), 4);
+    queryInput.value = processedQuery;
   }
-  
-  queryInput.value = formattedQuery;
-  state.searchQuery = formattedQuery;
   
   // Toggle states
   document.getElementById('search-placeholder').style.display = 'none';
   document.getElementById('edit-bhavan-form').style.display = 'none';
+  document.getElementById('search-results-container').style.display = 'none';
   document.getElementById('search-skeleton').style.display = 'flex';
   
   state.searchResults = [];
@@ -485,33 +536,104 @@ async function performBhavanSearch() {
   const token = sessionStorage.getItem('census_session_password');
   
   try {
-    // Digitally sign the search query with the password token
-    const response = await fetch(`${API_URL}?action=getBhavanDetails&bhavanId=${encodeURIComponent(formattedQuery)}&password=${encodeURIComponent(token)}`);
+    const response = await fetch(`${API_URL}?action=universalSearch&query=${encodeURIComponent(processedQuery)}&password=${encodeURIComponent(token)}`, {
+      credentials: 'omit'
+    });
     const data = await response.json();
     
     document.getElementById('search-skeleton').style.display = 'none';
     
-    if (data.success && data.data.length > 0) {
-      state.searchResults = data.data;
-      renderEditForm();
+    if (data.success && data.data && data.data.length > 0) {
+      const records = data.data;
+      const uniqueBhavans = [...new Set(records.map(r => r.bhavanId.toString().toUpperCase().trim()))];
+      
+      if (uniqueBhavans.length === 1) {
+        // Direct Redirection: Load edit panel immediately if matches only span 1 Bhavan
+        const matchedBhavanId = uniqueBhavans[0];
+        showToast("Bhavan Loaded", `Displaying records for Bhavan ${matchedBhavanId}.`, "success");
+        queryInput.value = matchedBhavanId;
+        loadBhavanForEditing(matchedBhavanId);
+      } else {
+        // Multi-Match View: Display beautiful grouped card results list
+        renderSearchResultsList(records);
+      }
     } else {
-      showNoResults();
+      showNoResultsForQuery(rawQuery);
     }
   } catch (err) {
-    console.error("API error while searching:", err);
+    console.error("API search error:", err);
     document.getElementById('search-skeleton').style.display = 'none';
-    showToast("Network Error", "Could not connect to the spreadsheet server.", "error");
-    showNoResults();
+    showToast("Network Error", "Could not connect to the database server.", "error");
+    showNoResultsForQuery(rawQuery);
   }
 }
 
-function showNoResults() {
-  document.getElementById('search-placeholder').style.display = 'block';
+// Render search results matching cards list
+function renderSearchResultsList(records) {
+  document.getElementById('search-placeholder').style.display = 'none';
+  document.getElementById('edit-bhavan-form').style.display = 'none';
+  
+  const container = document.getElementById('search-results-container');
+  const list = document.getElementById('search-results-list');
+  const countSpan = document.getElementById('search-results-count');
+  
+  list.innerHTML = '';
+  countSpan.textContent = records.length;
+  
+  records.forEach(record => {
+    const makaanNum = parseInt(record.makaanId, 10);
+    const formattedMakaanId = isNaN(makaanNum) ? record.makaanId : pad(makaanNum, 4);
+    
+    const cardHTML = `
+      <div class="search-result-card" onclick="loadBhavanForEditing('${record.bhavanId}')">
+        <div class="search-result-info">
+          <div class="search-result-meta">
+            <span class="search-result-badge bhavan">
+              <i data-lucide="clipboard-signature" style="width: 12px; height: 12px;"></i> Bhavan: ${record.bhavanId}
+            </span>
+            <span class="search-result-badge makaan">
+              <i data-lucide="home" style="width: 12px; height: 12px;"></i> Makaan: ${formattedMakaanId}
+            </span>
+          </div>
+          <div class="search-result-name">${record.mukhiyaNaam || 'N/A'}</div>
+          <div class="search-result-details">
+            <div class="search-result-detail-item">
+              <i data-lucide="phone" style="width: 12px; height: 12px;"></i> ${record.mobileNo || 'N/A'}
+            </div>
+            ${record.seId ? `
+              <div class="search-result-detail-item">
+                <i data-lucide="hash" style="width: 12px; height: 12px;"></i> SE ID: ${record.seId}
+              </div>
+            ` : ''}
+          </div>
+        </div>
+        <div class="search-result-action">
+          <button type="button" class="btn btn-secondary">
+            <i data-lucide="file-edit" style="width: 14px; height: 14px;"></i> Edit
+          </button>
+        </div>
+      </div>
+    `;
+    list.insertAdjacentHTML('beforeend', cardHTML);
+  });
+  
+  // Render Lucide Icons inside matching result cards
+  lucide.createIcons({
+    nodeList: list.querySelectorAll('[data-lucide]')
+  });
+  
+  container.style.display = 'block';
+}
+
+function showNoResultsForQuery(query) {
+  document.getElementById('search-results-container').style.display = 'none';
   document.getElementById('edit-bhavan-form').style.display = 'none';
   
   const placeholder = document.getElementById('search-placeholder');
+  placeholder.style.display = 'block';
+  
   placeholder.querySelector('h3').textContent = "No Records Found";
-  placeholder.querySelector('p').textContent = `No census records were found in the database matching Bhavan ID: ${state.searchQuery}.`;
+  placeholder.querySelector('p').textContent = `No census records matching "${query}" were found in the registry. Try another name, mobile number, or Bhavan ID.`;
 }
 
 function renderEditForm() {
@@ -609,7 +731,9 @@ async function addMakaanToEdit() {
   const token = sessionStorage.getItem('census_session_password');
   
   try {
-    const response = await fetch(`${API_URL}?action=getNextIds&password=${encodeURIComponent(token)}`);
+    const response = await fetch(`${API_URL}?action=getNextIds&password=${encodeURIComponent(token)}`, {
+      credentials: 'omit'
+    });
     const data = await response.json();
     if (data.success) {
       let maxM = parseInt(data.nextMakaanId, 10) || 1;
@@ -716,6 +840,7 @@ async function handleEditSubmit(event) {
     
     const response = await fetch(API_URL, {
       method: 'POST',
+      credentials: 'omit',
       headers: {
         'Content-Type': 'text/plain;charset=utf-8'
       },

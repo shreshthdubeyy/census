@@ -1008,3 +1008,140 @@ a:hover {
 #login-form .input-container {
   text-align: left;
 }
+
+/* ==========================================================================
+   UNIVERSAL SEARCH RESULTS STYLES
+   ========================================================================== */
+.search-results-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 1.5px solid var(--border-light);
+}
+
+.results-count-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.results-count-label strong {
+  color: var(--color-secondary);
+}
+
+.search-results-list-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 520px;
+  overflow-y: auto;
+  padding: 4px;
+}
+
+.search-result-card {
+  background-color: var(--bg-surface-card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 12px;
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition-normal);
+  animation: scaleIn var(--transition-normal);
+  cursor: pointer;
+  text-align: left;
+}
+
+@media (min-width: 600px) {
+  .search-result-card {
+    flex-direction: row;
+    align-items: center;
+  }
+}
+
+.search-result-card:hover {
+  border-color: var(--color-secondary);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+.search-result-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex-grow: 1;
+}
+
+.search-result-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.search-result-badge {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.search-result-badge.bhavan {
+  background-color: var(--color-primary-light);
+  color: var(--color-primary);
+}
+
+.search-result-badge.makaan {
+  background-color: hsl(195, 80%, 94%);
+  color: var(--color-secondary);
+}
+
+.search-result-name {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.search-result-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.search-result-detail-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.search-result-action {
+  flex-shrink: 0;
+  display: flex;
+}
+
+.search-result-action .btn {
+  min-height: 38px;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  background-color: var(--color-secondary);
+  box-shadow: 0 4px 10px rgba(6, 182, 212, 0.15);
+  color: white;
+  border: none;
+}
+
+.search-result-action .btn:hover {
+  background-color: hsl(195, 85%, 40%);
+}

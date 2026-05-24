@@ -117,7 +117,7 @@
           <div class="search-bar-container">
             <div class="search-input-wrapper">
               <i data-lucide="search" class="search-icon-inside"></i>
-              <input type="text" id="search-bhavan-query" class="form-input search-input" placeholder="Enter Bhavan Sankhya (e.g. CN-0001)" onkeypress="handleSearchKeyPress(event)">
+              <input type="text" id="search-bhavan-query" class="form-input search-input" placeholder="Search by Bhavan ID, name, or mobile number..." onkeypress="handleSearchKeyPress(event)">
             </div>
             <button type="button" class="btn btn-primary search-btn" onclick="performBhavanSearch()" id="search-btn">
               <i data-lucide="search"></i> Search
@@ -128,6 +128,19 @@
           <div class="skeleton-loader" id="search-skeleton">
             <div class="skeleton-row" style="width: 40%; margin-bottom: 20px;"></div>
             <div class="skeleton-card"></div>
+          </div>
+
+          <!-- Search Results List (Visible when multiple matches are found) -->
+          <div id="search-results-container" style="display: none; margin-bottom: 24px;">
+            <div class="search-results-header">
+              <span class="results-count-label"><i data-lucide="info" style="width: 16px; height: 16px;"></i> Found <strong id="search-results-count">0</strong> matching records</span>
+              <button type="button" class="btn btn-outline" onclick="clearSearchResults()" style="min-height: 28px; height: 28px; font-size: 0.8rem; padding: 0 12px; border-radius: 14px; border-color: var(--text-light); color: var(--text-light); flex-grow: 0; width: auto;">
+                Clear
+              </button>
+            </div>
+            <div id="search-results-list" class="search-results-list-cards">
+              <!-- Dynamic search result cards inserted here -->
+            </div>
           </div>
 
           <!-- Edit Form Area (Hidden until data is loaded) -->
@@ -162,9 +175,9 @@
           <!-- No Results / Initial Search State -->
           <div class="no-results" id="search-placeholder">
             <i data-lucide="search" class="no-results-icon"></i>
-            <h3>Search a Bhavan ID to Begin</h3>
-            <p style="color: var(--text-light); max-width: 320px; margin: 8px auto 0 auto; font-size: 0.9rem;">
-              Enter the exact Bhavan ID (e.g. <strong>CN-0001</strong>) above to fetch, edit, or add family details.
+            <h3>Find Records in the Registry</h3>
+            <p style="color: var(--text-light); max-width: 380px; margin: 8px auto 0 auto; font-size: 0.9rem;">
+              Search by <strong>Bhavan ID</strong> (e.g. CN-0001), <strong>Mukhiya Name</strong>, or <strong>Mobile Number</strong> to edit or add entries.
             </p>
           </div>
         </div>
