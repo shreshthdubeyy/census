@@ -184,7 +184,10 @@ async function fetchNextIdState() {
 
 function renderNextIds() {
   document.getElementById('new-bhavan-id').textContent = state.nextBhavanId;
-  document.getElementById('next-makaan-estimate').textContent = state.nextMakaanId;
+  const estimateEl = document.getElementById('next-makaan-estimate');
+  if (estimateEl) {
+    estimateEl.textContent = state.nextMakaanId;
+  }
   
   // Re-render blocks to ensure progressive starting numbers are accurate
   if (state.newFormBlocks.length === 0) {
@@ -311,7 +314,10 @@ function reindexNewFormMakaans() {
   const lastBlock = blocks[blocks.length - 1];
   if (lastBlock) {
     const lastBlockNum = parseInt(lastBlock.querySelector('.makaan-number-hidden-input').value, 10);
-    document.getElementById('next-makaan-estimate').textContent = pad(lastBlockNum + 1, 4);
+    const estimateEl = document.getElementById('next-makaan-estimate');
+    if (estimateEl) {
+      estimateEl.textContent = pad(lastBlockNum + 1, 4);
+    }
   }
 }
 
@@ -477,7 +483,10 @@ function toggleNewGairAvasiya(checkbox) {
     }
     // Update estimate at the top to display the next progressive number after this one
     const nextEst = pad(parseInt(state.nextMakaanId, 10) + 1, 4);
-    document.getElementById('next-makaan-estimate').textContent = nextEst;
+    const estimateEl = document.getElementById('next-makaan-estimate');
+    if (estimateEl) {
+      estimateEl.textContent = nextEst;
+    }
   } else {
     // Restore standard form states
     if (addBtn) addBtn.style.display = 'inline-flex';
@@ -688,8 +697,14 @@ function renderSearchResultsList(records) {
   
   records.forEach(record => {
     const isGair = !record.mukhiyaNaam || record.mukhiyaNaam.trim() === "" || (record.remarks && record.remarks.toLowerCase().includes("gair avasiya"));
-    const makaanNum = parseInt(record.makaanId, 10);
-    const formattedMakaanId = isNaN(makaanNum) ? record.makaanId : pad(makaanNum, 4);
+    
+    // Dynamic healing for historical '-' values
+    let tempMId = record.makaanId;
+    if (!tempMId || tempMId === "-") {
+      tempMId = state.nextMakaanId;
+    }
+    const makaanNum = parseInt(tempMId, 10);
+    const formattedMakaanId = isNaN(makaanNum) ? tempMId : pad(makaanNum, 4);
     
     const cardHTML = `
       <div class="search-result-card" onclick="loadBhavanForEditing('${record.bhavanId}')">
@@ -773,8 +788,14 @@ function renderEditForm() {
   
   if (isGair) {
     const baseMakaan = state.searchResults[0] || { makaanId: "", mukhiyaNaam: "", mobileNo: "", seId: "", remarks: "Gair Avasiya" };
-    const makaanNum = parseInt(baseMakaan.makaanId, 10);
-    const formattedMakaanId = isNaN(makaanNum) ? baseMakaan.makaanId : pad(makaanNum, 4);
+    
+    // Dynamic healing for historical '-' values
+    let tempMId = baseMakaan.makaanId;
+    if (!tempMId || tempMId === "-") {
+      tempMId = state.nextMakaanId;
+    }
+    const makaanNum = parseInt(tempMId, 10);
+    const formattedMakaanId = isNaN(makaanNum) ? tempMId : pad(makaanNum, 4);
     
     const cardHTML = `
       <div class="makaan-block disabled-gair" id="edit-makaan-block-${formattedMakaanId}">
