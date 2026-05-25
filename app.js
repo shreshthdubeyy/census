@@ -392,6 +392,7 @@ async function handleNewSubmit(event) {
     });
   });
   
+  const isGair = document.getElementById('new-gair-avasiya').checked;
   const token = sessionStorage.getItem('census_session_password');
   
   // Live Submission to Google Sheets Apps Script API
@@ -400,6 +401,7 @@ async function handleNewSubmit(event) {
     const payload = {
       action: 'createEntry',
       password: token,
+      isGairAvasiya: isGair,
       entries: entries
     };
     
@@ -433,10 +435,109 @@ async function handleNewSubmit(event) {
   }
 }
 
+// Toggle dynamic validations for Gair Avasiya (New Form)
+function toggleNewGairAvasiya(checkbox) {
+  const isChecked = checkbox.checked;
+  const container = document.getElementById('makaan-blocks-container');
+  const addBtn = document.querySelector('#view-new-entry .btn-outline');
+  
+  if (isChecked) {
+    // 1. Keep only the first block, remove others
+    const blocks = container.querySelectorAll('.makaan-block');
+    for (let i = 1; i < blocks.length; i++) {
+      blocks[i].remove();
+    }
+    state.newFormBlocks = [state.newFormBlocks[0]];
+    
+    // 2. Hide "Add Makaan" button
+    if (addBtn) addBtn.style.display = 'none';
+    
+    // 3. Adjust styles & required validators
+    const firstBlock = container.querySelector('.makaan-block');
+    if (firstBlock) {
+      firstBlock.classList.add('disabled-gair');
+      firstBlock.querySelector('.makaan-display-num').textContent = '-';
+      firstBlock.querySelector('.makaan-number-hidden-input').value = '-';
+      
+      const requiredInputs = firstBlock.querySelectorAll('[required]');
+      requiredInputs.forEach(input => {
+        input.removeAttribute('required');
+        input.classList.remove('invalid');
+      });
+      
+      firstBlock.querySelectorAll('.input-label span').forEach(s => s.style.display = 'none');
+      
+      const remarksInput = firstBlock.querySelector('[name="remarks"]');
+      if (remarksInput && !remarksInput.value.trim()) {
+        remarksInput.value = "Gair Avasiya";
+      }
+    }
+    document.getElementById('next-makaan-estimate').textContent = state.nextMakaanId;
+  } else {
+    // Restore standard form states
+    if (addBtn) addBtn.style.display = 'inline-flex';
+    
+    const firstBlock = container.querySelector('.makaan-block');
+    if (firstBlock) {
+      firstBlock.classList.remove('disabled-gair');
+      
+      const mukhiya = firstBlock.querySelector('[name="mukhiyaNaam"]');
+      const mobile = firstBlock.querySelector('[name="mobileNo"]');
+      if (mukhiya) mukhiya.setAttribute('required', 'true');
+      if (mobile) mobile.setAttribute('required', 'true');
+      
+      firstBlock.querySelectorAll('.input-label span').forEach(s => s.style.display = 'inline');
+      
+      const remarksInput = firstBlock.querySelector('[name="remarks"]');
+      if (remarksInput && remarksInput.value === "Gair Avasiya") {
+        remarksInput.value = "";
+      }
+    }
+    reindexNewFormMakaans();
+  }
+}
+
+// Toggle dynamic validations for Gair Avasiya (Edit Form)
+function toggleEditGairAvasiya(checkbox) {
+  const isChecked = checkbox.checked;
+  const container = document.getElementById('edit-makaan-blocks-container');
+  const addBtn = document.querySelector('#view-search-edit .btn-outline');
+  
+  if (isChecked) {
+    const blocks = container.querySelectorAll('.makaan-block');
+    if (blocks.length > 1) {
+      showToast("Blocks Marked For Removal", "Non-residential structures can only have one main block. Secondary families will be removed.", "warning");
+      blocks.forEach((block, idx) => {
+        if (idx > 0) {
+          const mId = block.id.replace('edit-makaan-block-', '');
+          if (!state.deletedMakaanIds.includes(mId)) {
+            state.deletedMakaanIds.push(mId);
+          }
+        }
+      });
+    }
+    if (addBtn) addBtn.style.display = 'none';
+    renderEditForm();
+  } else {
+    if (addBtn) addBtn.style.display = 'inline-flex';
+    renderEditForm();
+  }
+}
+
 function resetNewForm() {
   const container = document.getElementById('makaan-blocks-container');
   container.innerHTML = '';
   state.newFormBlocks = [];
+  
+  const gairCheckbox = document.getElementById('new-gair-avasiya');
+  if (gairCheckbox) {
+    gairCheckbox.checked = false;
+  }
+  
+  const addBtn = document.querySelector('#view-new-entry .btn-outline');
+  if (addBtn) {
+    addBtn.style.display = 'inline-flex';
+  }
   
   const submitBtn = document.getElementById('submit-new-btn');
   submitBtn.disabled = false;
@@ -581,8 +682,9 @@ function renderSearchResultsList(records) {
   countSpan.textContent = records.length;
   
   records.forEach(record => {
+    const isGair = record.makaanId === "-";
     const makaanNum = parseInt(record.makaanId, 10);
-    const formattedMakaanId = isNaN(makaanNum) ? record.makaanId : pad(makaanNum, 4);
+    const formattedMakaanId = isGair ? "N/A" : (isNaN(makaanNum) ? record.makaanId : pad(makaanNum, 4));
     
     const cardHTML = `
       <div class="search-result-card" onclick="loadBhavanForEditing('${record.bhavanId}')">
@@ -591,16 +693,16 @@ function renderSearchResultsList(records) {
             <span class="search-result-badge bhavan">
               <i data-lucide="clipboard-signature" style="width: 12px; height: 12px;"></i> Bhavan: ${record.bhavanId}
             </span>
-            <span class="search-result-badge makaan">
-              <i data-lucide="home" style="width: 12px; height: 12px;"></i> Makaan: ${formattedMakaanId}
+            <span class="search-result-badge makaan" style="${isGair ? 'background-color: var(--border-light); color: var(--text-muted);' : ''}">
+              <i data-lucide="${isGair ? 'alert-triangle' : 'home'}" style="width: 12px; height: 12px;"></i> ${isGair ? 'Gair Avasiya' : `Makaan: ${formattedMakaanId}`}
             </span>
           </div>
-          <div class="search-result-name">${record.mukhiyaNaam || 'N/A'}</div>
+          <div class="search-result-name">${isGair ? 'Gair Avasiya (Non-Residential Structure)' : (record.mukhiyaNaam || 'N/A')}</div>
           <div class="search-result-details">
             <div class="search-result-detail-item">
-              <i data-lucide="phone" style="width: 12px; height: 12px;"></i> ${record.mobileNo || 'N/A'}
+              <i data-lucide="phone" style="width: 12px; height: 12px;"></i> ${isGair ? 'N/A' : (record.mobileNo || 'N/A')}
             </div>
-            ${record.seId ? `
+            ${record.seId && !isGair ? `
               <div class="search-result-detail-item">
                 <i data-lucide="hash" style="width: 12px; height: 12px;"></i> SE ID: ${record.seId}
               </div>
@@ -642,14 +744,80 @@ function renderEditForm() {
   
   // Set header details
   document.getElementById('edit-bhavan-id').textContent = state.searchQuery;
-  document.getElementById('edit-families-count').textContent = state.searchResults.length;
+  
+  // Check Gair Avasiya checkbox status
+  const gairCheckbox = document.getElementById('edit-gair-avasiya');
+  const loadedIsGair = state.searchResults.length > 0 && state.searchResults[0].makaanId === "-";
+  const isGair = gairCheckbox ? gairCheckbox.checked : loadedIsGair;
+  
+  if (gairCheckbox) {
+    gairCheckbox.checked = isGair;
+  }
+  
+  document.getElementById('edit-families-count').textContent = isGair ? "0" : state.searchResults.length;
   
   const container = document.getElementById('edit-makaan-blocks-container');
   container.innerHTML = '';
   
-  state.searchResults.forEach((makaan, index) => {
-    renderEditMakaanCard(makaan, index, container);
-  });
+  const addBtn = document.querySelector('#view-search-edit .btn-outline');
+  if (addBtn) {
+    addBtn.style.display = isGair ? 'none' : 'inline-flex';
+  }
+  
+  if (isGair) {
+    const baseMakaan = state.searchResults[0] || { makaanId: "-", mukhiyaNaam: "", mobileNo: "", seId: "", remarks: "Gair Avasiya" };
+    
+    const cardHTML = `
+      <div class="makaan-block disabled-gair" id="edit-makaan-block--">
+        <div class="makaan-block-header">
+          <span class="makaan-title" style="background-color: var(--color-primary-light); color: var(--color-primary);">
+            <i data-lucide="home"></i> Makaan: <strong>- (Non-Residential)</strong>
+          </span>
+        </div>
+        
+        <div class="makaan-grid">
+          <input type="hidden" name="makaanId" value="-">
+          
+          <!-- Mukhiya Naam -->
+          <div class="input-container">
+            <label class="input-label">Mukhiya ka Naam (Head of Family)</label>
+            <input type="text" name="mukhiyaNaam" class="form-input" placeholder="Enter Full Name" value="${baseMakaan.mukhiyaNaam || ''}" autocapitalize="words" autocomplete="name" oninput="validateField(this)">
+          </div>
+          
+          <!-- Mobile Number -->
+          <div class="input-container">
+            <label class="input-label">Mobile No</label>
+            <input type="tel" name="mobileNo" class="form-input" placeholder="10-digit number" value="${baseMakaan.mobileNo || ''}" maxlength="10" inputmode="numeric" pattern="[0-9]{10}" oninput="formatMobileNumber(this); validateField(this);">
+          </div>
+          
+          <!-- Standard Optional SE ID Input Field -->
+          <div class="input-container">
+            <label class="input-label">SE ID (Socio-Economic ID)</label>
+            <input type="text" name="seId" class="form-input" placeholder="Social Economic ID (Optional)" value="${baseMakaan.seId || ''}" autocapitalize="characters" autocomplete="off" autocorrect="off">
+          </div>
+          
+          <!-- Remarks -->
+          <div class="input-container">
+            <label class="input-label">Remarks</label>
+            <input type="text" name="remarks" class="form-input" placeholder="Add optional remarks" value="${baseMakaan.remarks || 'Gair Avasiya'}">
+          </div>
+        </div>
+      </div>
+    `;
+    
+    container.insertAdjacentHTML('beforeend', cardHTML);
+    lucide.createIcons({
+      nodeList: container.querySelectorAll('#edit-makaan-block-- [data-lucide]')
+    });
+  } else {
+    state.searchResults.forEach((makaan, index) => {
+      // Clean '-' if converting from Gair Avasiya
+      if (makaan.makaanId === "-") {
+        makaan.makaanId = "";
+      }
+      renderEditMakaanCard(makaan, index, container);
+    });
+  }
 }
 
 function renderEditMakaanCard(makaan, index, container) {
@@ -800,6 +968,7 @@ async function handleEditSubmit(event) {
   const container = document.getElementById('edit-makaan-blocks-container');
   const cards = container.querySelectorAll('.makaan-block');
   const updatedEntries = [];
+  const isGair = document.getElementById('edit-gair-avasiya').checked;
   
   cards.forEach(card => {
     const makaanId = card.querySelector('[name="makaanId"]').value;
@@ -817,7 +986,7 @@ async function handleEditSubmit(event) {
     });
   });
   
-  if (updatedEntries.length === 0) {
+  if (updatedEntries.length === 0 && !isGair) {
     showToast("Invalid Operation", "A Bhavan cannot be empty. Maintain at least one family record.", "error");
     updateBtn.disabled = false;
     updateBtn.innerHTML = `<i data-lucide="check-circle"></i> Save Updates`;
@@ -835,6 +1004,7 @@ async function handleEditSubmit(event) {
       action: 'updateEntry',
       password: token,
       bhavanId: state.searchQuery,
+      isGairAvasiya: isGair,
       entries: updatedEntries
     };
     

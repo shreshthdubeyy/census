@@ -82,7 +82,17 @@
                 <span class="bhavan-label">Bhavan Sankhya (Auto-Generated)</span>
                 <span class="bhavan-value" id="new-bhavan-id">CN-XXXX</span>
               </div>
-              <div style="text-align: right;">
+              
+              <!-- Gair Avasiya Toggle -->
+              <div class="gair-avasiya-wrapper">
+                <label class="toggle-switch-label">
+                  <input type="checkbox" id="new-gair-avasiya" onchange="toggleNewGairAvasiya(this)">
+                  <span class="toggle-switch-slider"></span>
+                  <span class="toggle-switch-text">Gair Avasiya (Non-Residential)</span>
+                </label>
+              </div>
+              
+              <div class="makaan-estimate-wrapper" style="text-align: right;">
                 <span class="bhavan-label" style="display: block;">Estimated Next Makaan</span>
                 <span class="bhavan-value" id="next-makaan-estimate" style="font-size: 1.2rem; opacity: 0.9;">XXXX</span>
               </div>
@@ -150,7 +160,17 @@
                 <span class="bhavan-label">Editing Bhavan Sankhya</span>
                 <span class="bhavan-value" id="edit-bhavan-id" style="color: var(--color-secondary);">CN-XXXX</span>
               </div>
-              <div style="text-align: right;">
+              
+              <!-- Gair Avasiya Toggle Edit -->
+              <div class="gair-avasiya-wrapper">
+                <label class="toggle-switch-label">
+                  <input type="checkbox" id="edit-gair-avasiya" onchange="toggleEditGairAvasiya(this)">
+                  <span class="toggle-switch-slider secondary"></span>
+                  <span class="toggle-switch-text" style="color: var(--color-secondary);">Gair Avasiya (Non-Residential)</span>
+                </label>
+              </div>
+              
+              <div class="edit-families-count-wrapper" style="text-align: right;">
                 <span class="bhavan-label" style="display: block;">Families in Bhavan</span>
                 <span class="bhavan-value" id="edit-families-count" style="font-size: 1.2rem; opacity: 0.9; color: var(--color-secondary);">0</span>
               </div>
