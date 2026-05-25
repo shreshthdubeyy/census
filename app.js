@@ -456,8 +456,11 @@ function toggleNewGairAvasiya(checkbox) {
     const firstBlock = container.querySelector('.makaan-block');
     if (firstBlock) {
       firstBlock.classList.add('disabled-gair');
-      firstBlock.querySelector('.makaan-display-num').textContent = '-';
-      firstBlock.querySelector('.makaan-number-hidden-input').value = '-';
+      
+      // Let it keep its progressive Makaan ID
+      const currentIdStr = pad(parseInt(state.nextMakaanId, 10), 4);
+      firstBlock.querySelector('.makaan-display-num').textContent = currentIdStr;
+      firstBlock.querySelector('.makaan-number-hidden-input').value = currentIdStr;
       
       const requiredInputs = firstBlock.querySelectorAll('[required]');
       requiredInputs.forEach(input => {
@@ -472,7 +475,9 @@ function toggleNewGairAvasiya(checkbox) {
         remarksInput.value = "Gair Avasiya";
       }
     }
-    document.getElementById('next-makaan-estimate').textContent = state.nextMakaanId;
+    // Update estimate at the top to display the next progressive number after this one
+    const nextEst = pad(parseInt(state.nextMakaanId, 10) + 1, 4);
+    document.getElementById('next-makaan-estimate').textContent = nextEst;
   } else {
     // Restore standard form states
     if (addBtn) addBtn.style.display = 'inline-flex';
@@ -682,9 +687,9 @@ function renderSearchResultsList(records) {
   countSpan.textContent = records.length;
   
   records.forEach(record => {
-    const isGair = record.makaanId === "-";
+    const isGair = !record.mukhiyaNaam || record.mukhiyaNaam.trim() === "" || (record.remarks && record.remarks.toLowerCase().includes("gair avasiya"));
     const makaanNum = parseInt(record.makaanId, 10);
-    const formattedMakaanId = isGair ? "N/A" : (isNaN(makaanNum) ? record.makaanId : pad(makaanNum, 4));
+    const formattedMakaanId = isNaN(makaanNum) ? record.makaanId : pad(makaanNum, 4);
     
     const cardHTML = `
       <div class="search-result-card" onclick="loadBhavanForEditing('${record.bhavanId}')">
@@ -694,15 +699,15 @@ function renderSearchResultsList(records) {
               <i data-lucide="clipboard-signature" style="width: 12px; height: 12px;"></i> Bhavan: ${record.bhavanId}
             </span>
             <span class="search-result-badge makaan" style="${isGair ? 'background-color: var(--border-light); color: var(--text-muted);' : ''}">
-              <i data-lucide="${isGair ? 'alert-triangle' : 'home'}" style="width: 12px; height: 12px;"></i> ${isGair ? 'Gair Avasiya' : `Makaan: ${formattedMakaanId}`}
+              <i data-lucide="${isGair ? 'alert-triangle' : 'home'}" style="width: 12px; height: 12px;"></i> Makaan: ${formattedMakaanId} ${isGair ? ' (Gair Avasiya)' : ''}
             </span>
           </div>
-          <div class="search-result-name">${isGair ? 'Gair Avasiya (Non-Residential Structure)' : (record.mukhiyaNaam || 'N/A')}</div>
+          <div class="search-result-name">${isGair ? (record.mukhiyaNaam ? `${record.mukhiyaNaam} (Gair Avasiya)` : 'Gair Avasiya (Non-Residential)') : (record.mukhiyaNaam || 'N/A')}</div>
           <div class="search-result-details">
             <div class="search-result-detail-item">
-              <i data-lucide="phone" style="width: 12px; height: 12px;"></i> ${isGair ? 'N/A' : (record.mobileNo || 'N/A')}
+              <i data-lucide="phone" style="width: 12px; height: 12px;"></i> ${record.mobileNo || 'N/A'}
             </div>
-            ${record.seId && !isGair ? `
+            ${record.seId ? `
               <div class="search-result-detail-item">
                 <i data-lucide="hash" style="width: 12px; height: 12px;"></i> SE ID: ${record.seId}
               </div>
@@ -747,7 +752,9 @@ function renderEditForm() {
   
   // Check Gair Avasiya checkbox status
   const gairCheckbox = document.getElementById('edit-gair-avasiya');
-  const loadedIsGair = state.searchResults.length > 0 && state.searchResults[0].makaanId === "-";
+  const loadedIsGair = state.searchResults.length > 0 && 
+                       ((!state.searchResults[0].mukhiyaNaam || state.searchResults[0].mukhiyaNaam.trim() === "") || 
+                        (state.searchResults[0].remarks && state.searchResults[0].remarks.toLowerCase().includes("gair avasiya")));
   const isGair = gairCheckbox ? gairCheckbox.checked : loadedIsGair;
   
   if (gairCheckbox) {
@@ -765,29 +772,31 @@ function renderEditForm() {
   }
   
   if (isGair) {
-    const baseMakaan = state.searchResults[0] || { makaanId: "-", mukhiyaNaam: "", mobileNo: "", seId: "", remarks: "Gair Avasiya" };
+    const baseMakaan = state.searchResults[0] || { makaanId: "", mukhiyaNaam: "", mobileNo: "", seId: "", remarks: "Gair Avasiya" };
+    const makaanNum = parseInt(baseMakaan.makaanId, 10);
+    const formattedMakaanId = isNaN(makaanNum) ? baseMakaan.makaanId : pad(makaanNum, 4);
     
     const cardHTML = `
-      <div class="makaan-block disabled-gair" id="edit-makaan-block--">
+      <div class="makaan-block disabled-gair" id="edit-makaan-block-${formattedMakaanId}">
         <div class="makaan-block-header">
           <span class="makaan-title" style="background-color: var(--color-primary-light); color: var(--color-primary);">
-            <i data-lucide="home"></i> Makaan: <strong>- (Non-Residential)</strong>
+            <i data-lucide="home"></i> Makaan: <strong>${formattedMakaanId || '-'} (Non-Residential)</strong>
           </span>
         </div>
         
         <div class="makaan-grid">
-          <input type="hidden" name="makaanId" value="-">
+          <input type="hidden" name="makaanId" value="${formattedMakaanId}">
           
           <!-- Mukhiya Naam -->
           <div class="input-container">
             <label class="input-label">Mukhiya ka Naam (Head of Family)</label>
-            <input type="text" name="mukhiyaNaam" class="form-input" placeholder="Enter Full Name" value="${baseMakaan.mukhiyaNaam || ''}" autocapitalize="words" autocomplete="name" oninput="validateField(this)">
+            <input type="text" name="mukhiyaNaam" class="form-input" placeholder="Enter Full Name (Optional)" value="${baseMakaan.mukhiyaNaam || ''}" autocapitalize="words" autocomplete="name" oninput="validateField(this)">
           </div>
           
           <!-- Mobile Number -->
           <div class="input-container">
             <label class="input-label">Mobile No</label>
-            <input type="tel" name="mobileNo" class="form-input" placeholder="10-digit number" value="${baseMakaan.mobileNo || ''}" maxlength="10" inputmode="numeric" pattern="[0-9]{10}" oninput="formatMobileNumber(this); validateField(this);">
+            <input type="tel" name="mobileNo" class="form-input" placeholder="10-digit number (Optional)" value="${baseMakaan.mobileNo || ''}" maxlength="10" inputmode="numeric" pattern="[0-9]{10}" oninput="formatMobileNumber(this); validateField(this);">
           </div>
           
           <!-- Standard Optional SE ID Input Field -->
@@ -807,7 +816,7 @@ function renderEditForm() {
     
     container.insertAdjacentHTML('beforeend', cardHTML);
     lucide.createIcons({
-      nodeList: container.querySelectorAll('#edit-makaan-block-- [data-lucide]')
+      nodeList: container.querySelectorAll(`#edit-makaan-block-${formattedMakaanId} [data-lucide]`)
     });
   } else {
     state.searchResults.forEach((makaan, index) => {
