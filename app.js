@@ -241,6 +241,12 @@ function addMakaanBlock(initialData = null) {
           <input type="tel" name="mobileNo" class="form-input" placeholder="e.g. 9876543210" required maxlength="10" inputmode="numeric" pattern="[0-9]{10}" oninput="formatMobileNumber(this); validateField(this);">
         </div>
         
+        <!-- Family Members Count -->
+        <div class="input-container">
+          <label class="input-label">Family Members Count <span>*</span></label>
+          <input type="number" name="membersCount" class="form-input" placeholder="e.g. 4" required min="1" max="50" inputmode="numeric" oninput="validateField(this)">
+        </div>
+        
         <!-- SE ID (Socio-Economic ID) - Standard Alphanumeric Optional Field -->
         <div class="input-container">
           <label class="input-label">SE ID (Socio-Economic ID)</label>
@@ -248,7 +254,7 @@ function addMakaanBlock(initialData = null) {
         </div>
         
         <!-- Remarks -->
-        <div class="input-container">
+        <div class="input-container span-2">
           <label class="input-label">Remarks</label>
           <input type="text" name="remarks" class="form-input" placeholder="Add optional remarks">
         </div>
@@ -393,6 +399,7 @@ async function handleNewSubmit(event) {
     entries.push({
       mukhiyaNaam: block.querySelector('[name="mukhiyaNaam"]').value.trim(),
       mobileNo: block.querySelector('[name="mobileNo"]').value.trim(),
+      membersCount: block.querySelector('[name="membersCount"]').value.trim(),
       seId: block.querySelector('[name="seId"]').value.trim(), // Optional SE ID Manual Input
       remarks: block.querySelector('[name="remarks"]').value.trim()
     });
@@ -497,8 +504,10 @@ function toggleNewGairAvasiya(checkbox) {
       
       const mukhiya = firstBlock.querySelector('[name="mukhiyaNaam"]');
       const mobile = firstBlock.querySelector('[name="mobileNo"]');
+      const members = firstBlock.querySelector('[name="membersCount"]');
       if (mukhiya) mukhiya.setAttribute('required', 'true');
       if (mobile) mobile.setAttribute('required', 'true');
+      if (members) members.setAttribute('required', 'true');
       
       firstBlock.querySelectorAll('.input-label span').forEach(s => s.style.display = 'inline');
       
@@ -722,6 +731,9 @@ function renderSearchResultsList(records) {
             <div class="search-result-detail-item">
               <i data-lucide="phone" style="width: 12px; height: 12px;"></i> ${record.mobileNo || 'N/A'}
             </div>
+            <div class="search-result-detail-item">
+              <i data-lucide="users" style="width: 12px; height: 12px;"></i> Members: ${record.membersCount || '0'}
+            </div>
             ${record.seId ? `
               <div class="search-result-detail-item">
                 <i data-lucide="hash" style="width: 12px; height: 12px;"></i> SE ID: ${record.seId}
@@ -820,6 +832,12 @@ function renderEditForm() {
             <input type="tel" name="mobileNo" class="form-input" placeholder="10-digit number (Optional)" value="${baseMakaan.mobileNo || ''}" maxlength="10" inputmode="numeric" pattern="[0-9]{10}" oninput="formatMobileNumber(this); validateField(this);">
           </div>
           
+          <!-- Family Members Count -->
+          <div class="input-container">
+            <label class="input-label">Family Members Count</label>
+            <input type="number" name="membersCount" class="form-input" placeholder="Number of family members (Optional)" value="${baseMakaan.membersCount || ''}" min="1" max="50" inputmode="numeric" oninput="validateField(this)">
+          </div>
+          
           <!-- Standard Optional SE ID Input Field -->
           <div class="input-container">
             <label class="input-label">SE ID (Socio-Economic ID)</label>
@@ -827,7 +845,7 @@ function renderEditForm() {
           </div>
           
           <!-- Remarks -->
-          <div class="input-container">
+          <div class="input-container span-2">
             <label class="input-label">Remarks</label>
             <input type="text" name="remarks" class="form-input" placeholder="Add optional remarks" value="${baseMakaan.remarks || 'Gair Avasiya'}">
           </div>
@@ -890,6 +908,12 @@ function renderEditMakaanCard(makaan, index, container) {
           <input type="tel" name="mobileNo" class="form-input" placeholder="10-digit number" required value="${makaan.mobileNo || ''}" maxlength="10" inputmode="numeric" pattern="[0-9]{10}" oninput="formatMobileNumber(this); validateField(this);">
         </div>
         
+        <!-- Family Members Count -->
+        <div class="input-container">
+          <label class="input-label">Family Members Count <span>*</span></label>
+          <input type="number" name="membersCount" class="form-input" placeholder="Number of family members" required min="1" max="50" inputmode="numeric" value="${makaan.membersCount || ''}" oninput="validateField(this)">
+        </div>
+        
         <!-- Standard Optional SE ID Input Field -->
         <div class="input-container">
           <label class="input-label">SE ID (Socio-Economic ID)</label>
@@ -897,7 +921,7 @@ function renderEditMakaanCard(makaan, index, container) {
         </div>
         
         <!-- Remarks -->
-        <div class="input-container">
+        <div class="input-container span-2">
           <label class="input-label">Remarks</label>
           <input type="text" name="remarks" class="form-input" placeholder="Add optional remarks" value="${makaan.remarks || ''}">
         </div>
@@ -1011,6 +1035,7 @@ async function handleEditSubmit(event) {
       makaanId: makaanId,
       mukhiyaNaam: card.querySelector('[name="mukhiyaNaam"]').value.trim(),
       mobileNo: card.querySelector('[name="mobileNo"]').value.trim(),
+      membersCount: card.querySelector('[name="membersCount"]').value.trim(),
       seId: card.querySelector('[name="seId"]').value.trim(), // Manual optional SE ID
       remarks: card.querySelector('[name="remarks"]').value.trim()
     });
