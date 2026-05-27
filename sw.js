@@ -1,8 +1,10 @@
 const CACHE_NAME = 'census-connect-v1';
 const ASSETS = [
   'index.html',
+  'kiosk.html',
   'style.css',
   'app.js',
+  'kiosk.js',
   'Logo.png',
   'Hero.png',
   'manifest.json'

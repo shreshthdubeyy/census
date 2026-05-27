@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Censusconnect Presentation Kiosk</title>
+  <link rel="stylesheet" href="style.css">
+  
+  <!-- PWA Settings -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#06b6d4">
+  
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body style="background: radial-gradient(circle at 50% 50%, hsl(218, 40%, 95%) 0%, hsl(218, 30%, 91%) 100%); overflow-x: hidden;">
+
+  <!-- ==========================================================================
+       KIOSK LOCK SCREEN (Visible if unauthenticated)
+       ========================================================================== -->
+  <div id="kiosk-login-screen" class="login-overlay" style="display: flex;">
+    <div class="login-card" style="border-color: rgba(6, 182, 212, 0.3);">
+      <div class="login-logo-block">
+        <img src="Logo.png" alt="Census Logo" class="login-logo-img">
+        <h2 class="login-app-title" style="background: linear-gradient(135deg, var(--color-secondary) 0%, var(--color-primary) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Census Kiosk</h2>
+      </div>
+      <p class="login-subtitle">Public terminal interface. Please enter the secure password to activate the presentation slides.</p>
+      
+      <form id="kiosk-login-form" onsubmit="handleKioskLogin(event)">
+        <div class="input-container" style="margin-bottom: 24px;">
+          <label for="kiosk-password" class="input-label">Access Password <span>*</span></label>
+          <input type="password" id="kiosk-password" class="form-input" placeholder="Enter password to unlock" required autocomplete="current-password" style="border-radius: var(--radius-sm);">
+        </div>
+        
+        <button type="submit" class="btn btn-primary" style="width: 100%; background-color: var(--color-secondary); box-shadow: 0 4px 12px rgba(6, 182, 212, 0.25);">
+          <i data-lucide="unlock"></i> Unlock Kiosk Screen
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       STANDALONE KIOSK LAYOUT (Hidden until authenticated)
+       ========================================================================== -->
+  <div id="kiosk-app-layout" style="display: none; padding: 24px 16px;">
+    
+    <!-- Kiosk header with app brand and auto-lock -->
+    <header style="max-width: 860px; margin: 0 auto 20px auto; display: flex; justify-content: space-between; align-items: center;">
+      <div class="logo-block">
+        <img src="Logo.png" alt="Census Logo" style="height: 38px;">
+        <span class="app-title" style="background: var(--grad-hero); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-size: 1.25rem;">Census Kiosk</span>
+      </div>
+      
+      <!-- Lock button to secure the public display -->
+      <button onclick="lockKiosk()" style="background-color: var(--color-error-light); border: none; padding: 8px 16px; border-radius: 20px; display: flex; align-items: center; gap: 6px; cursor: pointer;">
+        <i data-lucide="lock" style="width: 16px; height: 16px; color: var(--color-error);"></i>
+        <span style="font-size: 0.82rem; font-weight: 700; color: var(--color-error);">Lock Terminal</span>
+      </button>
+    </header>
+
+    <!-- Top Slim Global Makaan Search -->
+    <div class="kiosk-search-container">
+      <div class="search-input-wrapper">
+        <i data-lucide="home" class="search-icon-inside" style="color: var(--color-secondary);"></i>
+        <input type="text" id="kiosk-makaan-query" class="form-input search-input" placeholder="Search Makaan Sankhya (e.g. 0005)..." oninput="handleKioskMakaanSearch(this.value)" style="border-color: var(--border-light); focus: border-color: var(--color-secondary);">
+      </div>
+    </div>
+
+    <!-- Skeleton Loading State -->
+    <div class="skeleton-loader" id="kiosk-skeleton" style="display: none; max-width: 700px; margin: 0 auto;">
+      <div class="skeleton-card" style="height: 420px; border-radius: var(--radius-lg);"></div>
+    </div>
+
+    <!-- Carousel Slider Container -->
+    <div class="kiosk-carousel-container" id="kiosk-carousel-container" style="display: none;">
+      <!-- Left tactile arrow -->
+      <button type="button" class="kiosk-nav-btn prev" id="kiosk-prev-btn" onclick="prevKioskCard()" title="Previous card">
+        <i data-lucide="chevron-left"></i>
+      </button>
+
+      <!-- Central card slot -->
+      <div class="kiosk-card-wrapper" id="kiosk-card-wrapper">
+        <!-- Dynamic card content goes here -->
+      </div>
+
+      <!-- Right tactile arrow -->
+      <button type="button" class="kiosk-nav-btn next" id="kiosk-next-btn" onclick="nextKioskCard()" title="Next card">
+        <i data-lucide="chevron-right"></i>
+      </button>
+    </div>
+
+    <!-- Footer pagination indicator -->
+    <div class="kiosk-footer-bar" id="kiosk-footer-bar" style="display: none;">
+      <div class="kiosk-page-indicator" id="kiosk-page-indicator">Makaan 0 of 0</div>
+    </div>
+
+    <!-- No records placeholder -->
+    <div class="no-results" id="kiosk-placeholder" style="display: none; padding: 60px 20px;">
+      <i data-lucide="monitor" class="no-results-icon"></i>
+      <h3>No Records in Registry</h3>
+      <p style="color: var(--text-light); max-width: 380px; margin: 8px auto 0 auto; font-size: 0.9rem;">
+        There are no census records available to display. Please verify your connection or database.
+      </p>
+    </div>
+
+  </div>
+
+  <!-- Toast notification system container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- Main standalone kiosk controller script -->
+  <script src="kiosk.js"></script>
+  <script>
+    lucide.createIcons();
+  </script>
+</body>
+</html>
